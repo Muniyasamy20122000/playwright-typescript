@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-
+//POC for github actios
 test('has title', async ({ page }) => {
   await page.goto('https://playwright.dev/');
 
