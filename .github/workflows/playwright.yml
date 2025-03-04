@@ -35,17 +35,30 @@ jobs:
         echo "$CHANGED_FILES"
 
         # Extract folder names and remove duplicates
-        FOLDERS=$(echo "$CHANGED_FILES" | awk -F'/' '{print $1}' | sort -u | tr '\n' ' ' | sed 's/ *$//')
+        FOLDERS=$(echo "$CHANGED_FILES" | awk -F'/' '{print $1}' | sort -u | tr '\n' ' ')
+        FOLDERS=${FOLDERS:-None}  # Default to 'None' if empty
+
         echo "Changed folders: $FOLDERS"
-
-        # Ensure the variable is not empty
-        if [[ -z "$FOLDERS" ]]; then
-          echo "No folder changes detected."
-          FOLDERS="None"
-        fi
-
-        # Store it in an output variable for later steps
         echo "folders=$FOLDERS" >> $GITHUB_ENV
 
     - name: Print changed folders
-      run: echo "Modified folders: '${{ env.folders }}'"
+      run: |
+        echo "Modified folders: $folders"
+      env:
+        folders: ${{ env.folders }}
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Install Playwright Browsers
+      run: npx playwright install --with-deps
+
+    - name: Run Playwright tests
+      run: npx playwright test
+
+    - uses: actions/upload-artifact@v4
+      if: ${{ !cancelled() }}
+      with:
+        name: playwright-report
+        path: playwright-report/
+        retention-days: 30
