@@ -1,24 +1,61 @@
 name: Playwright Tests
+
 on:
   push:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
+
 jobs:
   test:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Ensure full commit history is available
+
     - uses: actions/setup-node@v4
       with:
         node-version: lts/*
+
+    - name: Get changed files
+      id: changed_files
+      run: |
+        # Determine base branch for PRs
+        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          BASE_BRANCH="origin/${{ github.base_ref }}"
+        else
+          BASE_BRANCH="HEAD^"
+        fi
+
+        # Get changed files
+        CHANGED_FILES=$(git diff --name-only $BASE_BRANCH HEAD || true)
+        echo "Changed files:"
+        echo "$CHANGED_FILES"
+
+        # Extract folder names and remove duplicates
+        FOLDERS=$(echo "$CHANGED_FILES" | awk -F'/' '{print $1}' | sort -u | tr '\n' ' ')
+        FOLDERS=${FOLDERS:-None}  # Default to 'None' if empty
+
+        echo "Changed folders: $FOLDERS"
+        echo "folders=$FOLDERS" >> $GITHUB_ENV
+
+    - name: Print changed folders
+      run: |
+        echo "Modified folders: $folders"
+      env:
+        folders: ${{ env.folders }}
+
     - name: Install dependencies
       run: npm ci
+
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps
+
     - name: Run Playwright tests
       run: npx playwright test
+
     - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}
       with:
