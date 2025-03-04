@@ -22,20 +22,21 @@ jobs:
     - name: Get changed files
       id: changed_files
       run: |
-        # Get the changed files in a PR
-        if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
-          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }} HEAD)
+        # Determine base branch for PRs
+        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          BASE_BRANCH="origin/${{ github.base_ref }}"
         else
-          CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
+          BASE_BRANCH="HEAD^"
         fi
 
+        # Get changed files
+        CHANGED_FILES=$(git diff --name-only $BASE_BRANCH HEAD || true)
         echo "Changed files:"
         echo "$CHANGED_FILES"
 
         # Extract folder names and remove duplicates
-        FOLDERS=$(echo "$CHANGED_FILES" | awk -F'/' '{print $1}' | sort -u)
-        echo "Changed folders:"
-        echo "$FOLDERS"
+        FOLDERS=$(echo "$CHANGED_FILES" | awk -F'/' '{print $1}' | sort -u | tr '\n' ' ')
+        echo "Changed folders: $FOLDERS"
 
         # Store it in an output variable for later steps
         echo "folders=$FOLDERS" >> $GITHUB_ENV
